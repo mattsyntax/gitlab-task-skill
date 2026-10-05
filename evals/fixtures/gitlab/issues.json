@@ -1,0 +1,18 @@
+[
+ {"iid": 84, "title": "Leaderboard: show recruiter avatars", "state": "closed",
+  "labels": ["FrontEnd", "Feature ✨"], "created_at": "2026-09-14T10:12:00.000+03:00",
+  "web_url": "https://gitlab.example.com/demo/app/-/issues/84",
+  "description": "## Description\nShow each recruiter's photo next to their name on the leaderboard."},
+ {"iid": 85, "title": "Leaderboard: export to CSV", "state": "opened",
+  "labels": ["Backend", "Feature ✨", "To Do 📋"], "created_at": "2026-09-16T14:40:00.000+03:00",
+  "web_url": "https://gitlab.example.com/demo/app/-/issues/85",
+  "description": "## Description\nManagers want to download the current leaderboard as a CSV file."},
+ {"iid": 87, "title": "Uploading an employee photo returns 404", "state": "closed",
+  "labels": ["Backend", "BUG 🐛", "🔴 High priority"], "created_at": "2026-09-18T11:05:00.000+03:00",
+  "web_url": "https://gitlab.example.com/demo/app/-/issues/87",
+  "description": "## Description\nOn the employee card, choosing a new profile photo fails with a 404 error and the old photo stays.\n\n## Implementation plan\n**Technical details:** the upload form posts to `/api/employees/:id/photo`, but the route is registered as `/api/employee/:id/photo` in `server/routes/employees.js`."},
+ {"iid": 90, "title": "Seed script creates duplicate demo users", "state": "opened",
+  "labels": ["Backend", "BUG 🐛", "🟡 Medium priority"], "created_at": "2026-09-24T09:47:00.000+03:00",
+  "web_url": "https://gitlab.example.com/demo/app/-/issues/90",
+  "description": "## Description\nRunning the seed twice creates every demo user again instead of skipping existing ones."}
+]

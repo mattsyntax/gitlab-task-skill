@@ -1,0 +1,10 @@
+[
+ {"name": "Backend", "description": "Server side"},
+ {"name": "FrontEnd", "description": "Web client"},
+ {"name": "BUG 🐛", "description": "Something is broken"},
+ {"name": "Feature ✨", "description": "New functionality"},
+ {"name": "Improvement", "description": "Change to existing behaviour"},
+ {"name": "To Do 📋", "description": "Ready to be picked up"},
+ {"name": "🔴 High priority", "description": ""},
+ {"name": "🟡 Medium priority", "description": ""}
+]
