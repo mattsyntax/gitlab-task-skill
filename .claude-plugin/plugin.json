@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "gitlab-task",
+  "version": "1.0.0",
+  "description": "Draft GitLab issues from plain requests in Russian or English: duplicate check, existing labels only, backend/frontend split, review before sending.",
+  "author": {
+    "name": "mattsyntax",
+    "url": "https://github.com/mattsyntax"
+  },
+  "homepage": "https://github.com/mattsyntax/gitlab-task-skill",
+  "repository": "https://github.com/mattsyntax/gitlab-task-skill",
+  "license": "MIT",
+  "keywords": ["gitlab", "issues", "tasks", "bug-report", "skill"]
+}

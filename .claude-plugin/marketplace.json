@@ -1,0 +1,17 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-marketplace.json",
+  "name": "gitlab-task-skill",
+  "description": "GitLab issue drafting skill for Claude Code.",
+  "owner": {
+    "name": "mattsyntax",
+    "url": "https://github.com/mattsyntax"
+  },
+  "plugins": [
+    {
+      "name": "gitlab-task",
+      "description": "Draft GitLab issues from plain requests, review them, then send via the GitLab API.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}
