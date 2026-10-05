@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "gitlab-task",
-      "description": "Draft GitLab issues from plain requests, review them, then send via the GitLab API.",
+      "description": "Draft GitLab issues for review, check for duplicates, use only existing labels, link backend/frontend pairs, and send via the API after your approval. Russian and English.",
       "source": "./",
       "category": "productivity"
     }
