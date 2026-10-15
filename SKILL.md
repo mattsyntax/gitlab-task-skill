@@ -54,6 +54,7 @@ The audience differs per section, which is why the split matters:
 - **План реализации** is for the developer. Start with a `**Технические детали:**` paragraph (where in the code, how it works now, related issues), then checkboxes with concrete changes. Free text is fine here, not only checkboxes.
 - **Критерии приёмки**: observable behaviour a tester can verify; endpoints are fine when that is what gets tested.
 - Typography: straight quotes `"..."` and a plain hyphen `-`. No `«»`, no em dash, no `…`, so issue text looks the same whoever drafted it.
+- Screenshots: put them next to the drafts in `docs/tasks/img/` with a name matching the draft (`09-docs-download-no-auth.png`) and reference them as `![step 3](img/09-docs-download-no-auth.png)`. On send the script uploads each local image to the project and swaps the link. Use screenshots only where they show something (UI errors, wrong numbers, untranslated text); for API bugs paste the request and response as text instead.
 - Product decisions you cannot make (e.g. "should closed leads ever reopen?") go in as the first checkbox "Согласовать с владельцем продукта: ...", not as an assumption.
 
 ### Backend / frontend split

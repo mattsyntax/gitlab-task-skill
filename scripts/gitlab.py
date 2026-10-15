@@ -25,6 +25,8 @@ Task file format: front matter, then the issue body (markdown).
   created_at: 2026-09-21T10:15:00+03:00   (optional, needs admin / project owner token)
   depends_on: 01-foo.md                   (optional, file in the same dir)
   iid: 515                                (written back by the script after creation)
+Images: ![alt](img/file.png) with a path relative to the draft is uploaded to the project
+on send and the link is replaced; the dry run lists the images and fails on missing files.
   ---
 A file with iid is never created twice. depends_on: the dependency is created first;
 its quoted title in the body gets " (#iid)" appended and a relates_to link is created
@@ -32,6 +34,7 @@ its quoted title in the body gets " (#iid)" appended and a relates_to link is cr
 """
 import datetime as dt
 import json
+import mimetypes
 import os
 import random
 import re
@@ -40,6 +43,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 
 PER_PAGE = 100  # GitLab maximum
 
@@ -155,6 +159,41 @@ def request(method, path, params=None, data=None):
         sys.exit(f"Cannot reach {c['api']}: {e.reason}. If the API lives elsewhere, set GITLAB_API in .env")
 
 
+def upload(path):
+    """Upload a local file to the project, return its markdown (GitLab /uploads)."""
+    if MOCK:
+        return f"![{os.path.basename(path)}](/uploads/mock/{os.path.basename(path)})"
+    c = ctx()
+    boundary = uuid.uuid4().hex
+    with open(path, "rb") as f:
+        content = f.read()
+    mime = mimetypes.guess_type(path)[0] or "application/octet-stream"
+    body = (f"--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"{os.path.basename(path)}\"\r\n"
+            f"Content-Type: {mime}\r\n\r\n").encode() + content + f"\r\n--{boundary}--\r\n".encode()
+    req = urllib.request.Request(f"{c['api']}/projects/{P()}/uploads", data=body, method="POST")
+    req.add_header("PRIVATE-TOKEN", c["token"])
+    req.add_header("Content-Type", f"multipart/form-data; boundary={boundary}")
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return json.loads(r.read())["markdown"]
+    except urllib.error.HTTPError as e:
+        sys.exit(f"HTTP {e.code} upload {path}: {e.read().decode(errors='replace')[:300]}")
+
+
+IMAGE_RE = re.compile(r"!\[([^\]]*)\]\((?!https?://|/)([^)\s]+)\)")
+
+
+def local_images(body, base_dir):
+    """Local image paths referenced as ![alt](relative/path) in a draft; missing files abort."""
+    paths = []
+    for _alt, rel in IMAGE_RE.findall(body):
+        full = os.path.normpath(os.path.join(base_dir, rel))
+        if not os.path.isfile(full):
+            sys.exit(f"image not found: {rel} (resolved to {full})")
+        paths.append((rel, full))
+    return paths
+
+
 def get_all(path, params=None):
     params = dict(params or {}, per_page=PER_PAGE, page=1)
     items = []
@@ -254,6 +293,11 @@ def cmd_create(args):
             sys.exit(f"{file}: create {meta['depends_on']} first")
         ref = f"#{dep_iid}" if dep_iid else "#<iid>"
         body = body.replace(f'"{dep_meta["title"]}"', f'"{dep_meta["title"]}" ({ref})')
+    images = local_images(body, os.path.dirname(file))
+    if not dry:
+        for rel, full in images:
+            url = re.search(r"\]\(([^)]+)\)", upload(full)).group(1)
+            body = re.sub(r"!\[([^\]]*)\]\(" + re.escape(rel) + r"\)", lambda m: f"![{m.group(1)}]({url})", body)
     data = {"title": meta["title"], "description": body}
     if meta.get("labels"):
         labels = [l.strip() for l in meta["labels"].split(",") if l.strip()]
@@ -265,6 +309,8 @@ def cmd_create(args):
     if meta.get("created_at"):
         data["created_at"] = meta["created_at"]
     if dry:
+        if images:
+            print(f"images to upload: {', '.join(rel for rel, _ in images)}")
         print(json.dumps(data, ensure_ascii=False, indent=1))
         return
     issue, _ = request("POST", f"/projects/{P()}/issues", data=data)
