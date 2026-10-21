@@ -93,6 +93,7 @@ The frontend issue now says `Depends on "Leaderboard: filter by week and month (
 - Bugs noticed along the way are not buried in the task; the skill offers to file them separately.
 - Imports earlier work with its history: on request, sets `created_at` in the past, on working days and hours, never in the future and never before an issue it references.
 - Never creates an issue twice: after sending, the issue number (`iid`) is written back into the draft.
+- Closes opened issues by label: finds matching open issues, reports them with `--dry-run` for review, and closes them via the API after your explicit approval.
 
 ## Installation
 
@@ -161,6 +162,7 @@ The flow is always the same: research (labels, duplicates, code), drafts in `doc
 | `create-all [dir] [--dry-run]` | send all drafts without `iid`: dependencies first, the rest by date |
 | `dates --from YYYY-MM-DD [--to YYYY-MM-DD] --count N [--tz +03:00] [--seed N]` | pick timestamps on working days and hours |
 | `relabel "Old" "New" [--dry-run]` | replace a label on every issue |
+| `close-by-label "Label" [--dry-run]` | close all opened issues with the specified label |
 
 ## Draft format
 

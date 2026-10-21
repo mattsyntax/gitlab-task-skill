@@ -412,6 +412,7 @@ def cmd_dates(args):
     for p in picks:
         print(p.isoformat(timespec="seconds"))
 
+
 class GitLab:
     """GitLab client wrapper providing programmatic access to GitLab issues and labels."""
 

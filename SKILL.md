@@ -1,11 +1,11 @@
 ---
 name: gitlab-task
-description: Create GitLab issues (tasks, bugs, improvements) for the current repository - researches existing issues for duplicates, picks existing labels, drafts issues as markdown files in docs/tasks/ for review, splits backend/frontend work into linked issues, and only after explicit approval sends them via the GitLab API (optionally with historical created_at dates when importing or backfilling earlier work). Supports Russian and English - the issue is written in the language of the request. Use this whenever the user wants to create, file or draft a task, issue, ticket or bug report in Russian or English, in any phrasing - e.g. "создай задачу", "заведи таск", "заведи баг", "закинь в гитлаб", "create an issue", "file a bug", "add a ticket", "push it to gitlab" - or turns review/audit findings into tasks, even if they don't say "GitLab" explicitly but the repo's origin is a GitLab instance.
+description: Create and manage GitLab issues (tasks, bugs, improvements, batch close by label) for the current repository - researches existing issues for duplicates, picks existing labels, drafts issues as markdown files in docs/tasks/ for review, splits backend/frontend work into linked issues, and only after explicit approval sends them via the GitLab API (optionally with historical created_at dates when importing or backfilling earlier work). Also closes opened issues by label upon request with a mandatory dry-run review gate. Supports Russian and English - responds and writes in the language of the request. Use this whenever the user wants to create, file or draft a task, issue, ticket or bug report ("создай задачу", "заведи таск", "заведи баг", "закинь в гитлаб", "create an issue", "file a bug", "add a ticket", "push it to gitlab"), or close tasks/bugs by label ("закрой задачи с меткой X", "закрой баги", "закрыть таски по лейблу", "close issues with label X", "close bugs"), or turns review/audit findings into tasks, even if they don't say "GitLab" explicitly but the repo's origin is a GitLab instance.
 ---
 
 # GitLab task
 
-Turn a request ("+ таск: эндпоинты через тире", "сделай задачи по найденному") into well-written GitLab issues. The flow is always: **research -> drafts on disk -> user approval -> send**. Drafts first, because issues are visible to the whole team instantly, notify people, and can't be cleanly un-created; a file in `docs/tasks/` costs nothing to fix.
+Turn a request ("+ таск: эндпоинты через тире", "сделай задачи по найденному", "закрой все задачи с лейблом To Do") into well-written GitLab issues or lifecycle operations. The flow is always: **research -> dry-run / drafts on disk -> user approval -> send**. Drafts and dry-runs first, because issues are visible to the whole team instantly, notify people, and can't be cleanly undone.
 
 Helper script (bundled): `python3 "${CLAUDE_SKILL_DIR}/scripts/gitlab.py" <command>` - run it from inside the repository. Run it with no arguments for the full usage text. Templates: `${CLAUDE_SKILL_DIR}/assets/task-template.ru.md` and `${CLAUDE_SKILL_DIR}/assets/task-template.en.md`.
 
@@ -37,19 +37,23 @@ labels: BUG 🐛, Backend, To Do 📋, 🔴 High priority
 created_at: 2026-09-23T14:26:00+03:00   # only if dates were requested, see section 5
 depends_on: 11-manual-bonuses.md        # only for the dependent half of a split task
 ---
+
 ## Описание
+
 ## Цель
+
 ## План реализации
 **Технические детали:** ...
+
 *Что нужно изменить:*
 - [ ] ...
+
 ## Критерии приёмки
 *Как понять что задача готова:*
 1. ...
 ```
 
 The audience differs per section, which is why the split matters:
-
 - **Описание** and **Цель** are read by QA, managers and the product owner. Plain human language: what is wrong or missing, who is affected, why it matters, reference to the spec (ТЗ п. X) if there is one. No class names, methods, tables, env vars or code. Bad: "Бонус считается в CalcRecruiterTasksJob по коэффициентам из таблицы bonuses". Good: "Сейчас вручную начислить бонус нельзя: система считает бонус сама по количеству выполненных задач."
 - **План реализации** is for the developer. Start with a `**Технические детали:**` paragraph (where in the code, how it works now, related issues), then checkboxes with concrete changes. Free text is fine here, not only checkboxes.
 - **Критерии приёмки**: observable behaviour a tester can verify; endpoints are fine when that is what gets tested.
@@ -77,7 +81,25 @@ For importing or backfilling work that really happened earlier (tasks moved from
 
 `gitlab.py create-all docs/tasks` sends every draft without an `iid`, dependencies first, then by `created_at`. After each issue is created its `iid` is written back into the draft's front matter, so a rerun after a failure never duplicates anything. Report the resulting `#iid` + URL list to the user.
 
+## 7. Closing issues by label
+
+When the user requests to close issues matching a label (e.g. "закрой задачи с меткой X", "закрой баги", "close issues labeled X"):
+
+1. Check existing labels with `gitlab.py labels` to match the exact label name (including emoji or casing). If ambiguous, ask the user to clarify.
+2. Always execute a dry-run first to identify which opened issues will be affected:
+   ```bash
+   python3 "${CLAUDE_SKILL_DIR}/scripts/gitlab.py" close-by-label "<Label>" --dry-run
+   ```
+3. Show the user the list of matching issues (`#iid`, title) and the total count.
+4. Stop and wait for explicit confirmation ("ок", "да", "закрывай", "yes", "close them"). Never close issues without confirmation, as this notifies subscribers and changes tracker state.
+5. After confirmation, execute the command without `--dry-run`:
+   ```bash
+   python3 "${CLAUDE_SKILL_DIR}/scripts/gitlab.py" close-by-label "<Label>"
+   ```
+6. Report the list of closed `#iid` issues back to the user.
+
 ## Other commands
 
+- `gitlab.py close-by-label "Label" [--dry-run]` - close all opened issues having the specified label. Always dry-run first and ask for user confirmation.
 - `gitlab.py relabel "Old" "New" [--dry-run]` - swap a label on every issue (all states). Always dry-run first and report the count; it touches many issues and notifies watchers.
 - `gitlab.py issue <iid>` - read one issue with its description.
