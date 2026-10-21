@@ -14,6 +14,7 @@ Usage:
   gitlab.py issues [--state all|opened|closed] [--out file.json]
   gitlab.py issue 229
   gitlab.py relabel "Old label" "New label" [--dry-run]
+  gitlab.py close-by-label "Label" [--dry-run]
   gitlab.py create docs/tasks/01-foo.md [--dry-run]
   gitlab.py create-all [docs/tasks] [--dry-run]
   gitlab.py dates --from 2026-09-21 --to 2026-10-05 --count 14 [--tz +03:00] [--seed N]
@@ -278,6 +279,35 @@ def cmd_relabel(args):
         print(f"#{i['iid']}\tdone")
 
 
+def close_issues_by_label(label, dry_run=False):
+    """Close all currently opened issues with the specified label."""
+    known = {l["name"] for l in get_all(f"/projects/{P()}/labels")}
+    if label not in known:
+        sys.exit(f"unknown label: '{label}'")
+    # Fetch only currently 'opened' issues
+    issues = get_all(f"/projects/{P()}/issues", {"state": "opened", "labels": label})
+    print(f"Found {len(issues)} open issue(s) with label '{label}'")
+    closed = []
+    for i in issues:
+        if dry_run:
+            print(f"[dry-run] #{i['iid']}\t{i['title']}")
+            closed.append(i)
+            continue
+        # GitLab API state_event parameter: 'close' or 'reopen'
+        request("PUT", f"/projects/{P()}/issues/{i['iid']}", data={"state_event": "close"})
+        print(f"#{i['iid']}\tclosed: {i['title']}")
+        closed.append(i)
+    return closed
+
+
+def cmd_close_by_label(args):
+    if not args or args[0].startswith("--"):
+        sys.exit("Usage: gitlab.py close-by-label \"Label\" [--dry-run]")
+    label = args[0]
+    dry = "--dry-run" in args
+    close_issues_by_label(label, dry_run=dry)
+
+
 def cmd_create(args):
     file, dry = args[0], "--dry-run" in args
     meta, body = parse_task(file)
@@ -382,10 +412,49 @@ def cmd_dates(args):
     for p in picks:
         print(p.isoformat(timespec="seconds"))
 
+class GitLab:
+    """GitLab client wrapper providing programmatic access to GitLab issues and labels."""
+
+    def __init__(self, project=None, token=None, api=None):
+        if project:
+            os.environ["GITLAB_PROJECT"] = project
+        if token:
+            os.environ["GITLAB_TOKEN"] = token
+        if api:
+            os.environ["GITLAB_API"] = api
+
+    def get_labels(self):
+        """Fetch all project labels."""
+        return get_all(f"/projects/{P()}/labels")
+
+    def get_issues(self, state="all", labels=None):
+        """Fetch issues with optional state ('opened', 'closed', 'all') and labels."""
+        params = {"state": state}
+        if labels:
+            params["labels"] = labels
+        return get_all(f"/projects/{P()}/issues", params)
+
+    def close_issue(self, iid):
+        """Close a specific issue by its iid."""
+        return request("PUT", f"/projects/{P()}/issues/{int(iid)}", data={"state_event": "close"})
+
+    def close_issues_by_label(self, label, dry_run=False):
+        """Close all opened issues containing the specified label."""
+        return close_issues_by_label(label, dry_run=dry_run)
+
 
 if __name__ == "__main__":
-    cmds = {"labels": cmd_labels, "issues": cmd_issues, "issue": cmd_issue, "relabel": cmd_relabel,
-            "create": cmd_create, "create-all": cmd_create_all, "dates": cmd_dates}
+    cmds = {
+        "labels": cmd_labels,
+        "issues": cmd_issues,
+        "issue": cmd_issue,
+        "relabel": cmd_relabel,
+        "close": cmd_close_by_label,
+        "close-by-label": cmd_close_by_label,
+        "create": cmd_create,
+        "create-all": cmd_create_all,
+        "dates": cmd_dates,
+    }
     if len(sys.argv) < 2 or sys.argv[1] not in cmds:
         sys.exit(__doc__)
     cmds[sys.argv[1]](sys.argv[2:])
